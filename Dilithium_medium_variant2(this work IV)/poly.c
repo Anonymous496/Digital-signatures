@@ -209,17 +209,47 @@ static unsigned int rej_eta(uint32_t *a,
   ctr = pos = 0;
   while(ctr < len) {
 #if ETA <= 3
-    t0 = buf[pos] & 0x07;
-    t1 = buf[pos++] >> 5;
+    t0 = buf[pos] & 0x0f;
+    t1 = buf[pos++] >> 4;
 #else
     t0 = buf[pos] & 0x0F;
     t1 = buf[pos++] >> 4;
 #endif
-
+/*
     if(t0 <= 2*ETA)
       a[ctr++] = Q + ETA - t0;
     if(t1 <= 2*ETA && ctr < N)
       a[ctr++] = Q + ETA - t1;
+*/
+    if(t0==0x00)
+	a[ctr++]=Q-2;
+    else if(t0<=0x04)
+	a[ctr++]=Q-1;
+    else if(t0<=0x0a)
+	a[ctr++]=Q;
+    else if(t0<=0x0e)
+	a[ctr++]=Q+1;
+    else 
+	a[ctr++]=Q+2;
+    
+    t0=t1;
+
+    if(ctr<N)
+    {
+    if(t0==0x00)
+	a[ctr++]=Q-2;
+    else if(t0<=0x04)
+	a[ctr++]=Q-1;
+    else if(t0<=0x0a)
+	a[ctr++]=Q;
+    else if(t0<=0x0e)
+	a[ctr++]=Q+1;
+    else 
+	a[ctr++]=Q+2;
+
+
+    }
+
 
     if(pos >= buflen)
       break;
@@ -457,7 +487,7 @@ void polyeta_unpack(poly *r, const unsigned char *a) {
 *              - const poly *a: pointer to input polynomial
 **************************************************/
 void polyt1_pack(unsigned char *r, const poly *a) {
-#if D != 14
+#if D != 10
 #error "polyt1_pack() assumes D == 14"
 #endif
   unsigned int i;
@@ -518,7 +548,7 @@ void polyt0_pack(unsigned char *r, const poly *a) {
     t[1] = Q + (1 << (D-1)) - a->coeffs[4*i+1];
     t[2] = Q + (1 << (D-1)) - a->coeffs[4*i+2];
     t[3] = Q + (1 << (D-1)) - a->coeffs[4*i+3];
-
+/*
     r[7*i+0]  =  t[0];
     r[7*i+1]  =  t[0] >> 8;
     r[7*i+1] |=  t[1] << 6;
@@ -529,6 +559,16 @@ void polyt0_pack(unsigned char *r, const poly *a) {
     r[7*i+5]  =  t[2] >> 12;
     r[7*i+5] |=  t[3] << 2;
     r[7*i+6]  =  t[3] >> 6;
+*/
+
+    r[5*i+0]  =  t[0];
+    r[5*i+1]  =  t[0] >> 8;
+    r[5*i+1] |=  t[1] << 2;
+    r[5*i+2]  =  t[1] >> 6;
+    r[5*i+2] |=  t[2] << 4;
+    r[5*i+3]  =  t[2] >> 4;
+    r[5*i+3] |=  t[3] << 6;    
+    r[5*i+4]  =  t[3] >> 2;
   }
 }
 
@@ -546,6 +586,7 @@ void polyt0_unpack(poly *r, const unsigned char *a) {
   unsigned int i;
 
   for(i = 0; i < N/4; ++i) {
+  /*
     r->coeffs[4*i+0]  = a[7*i+0];
     r->coeffs[4*i+0] |= (uint32_t)(a[7*i+1] & 0x3F) << 8;
 
@@ -559,6 +600,19 @@ void polyt0_unpack(poly *r, const unsigned char *a) {
 
     r->coeffs[4*i+3]  = a[7*i+5] >> 2;
     r->coeffs[4*i+3] |= (uint32_t)a[7*i+6] << 6;
+*/
+
+    r->coeffs[4*i+0]  = a[5*i+0];
+    r->coeffs[4*i+0] |= (uint32_t)(a[5*i+1] & 0x3) << 8;
+    
+    r->coeffs[4*i+1]  = a[5*i+1] >> 2;
+    r->coeffs[4*i+1] |= (uint32_t)(a[5*i+2] & 0x0F) << 6;
+    
+    r->coeffs[4*i+2]  = a[5*i+2] >> 4;
+    r->coeffs[4*i+2] |= (uint32_t)(a[5*i+3] & 0x3F) << 4;
+
+    r->coeffs[4*i+3]  = a[5*i+3] >> 6;
+    r->coeffs[4*i+3] |= (uint32_t)a[5*i+4] << 2;
 
     r->coeffs[4*i+0] = Q + (1 << (D-1)) - r->coeffs[4*i+0];
     r->coeffs[4*i+1] = Q + (1 << (D-1)) - r->coeffs[4*i+1];
@@ -583,11 +637,11 @@ void polyz_pack(unsigned char *r, const poly *a) {
 #error "polyz_pack() assumes GAMMA1 <= 2^{19}"
 #endif
   unsigned int i;
-  uint32_t t[2];
+  uint32_t t[4];
 
-  for(i = 0; i < N/2; ++i) {
+//  for(i = 0; i < N/2; ++i) {
     /* Map to {0,...,2*GAMMA1 - 2} */
-    t[0] = GAMMA1 - 1 - a->coeffs[2*i+0];
+/*    t[0] = GAMMA1 - 1 - a->coeffs[2*i+0];
     t[0] += ((int32_t)t[0] >> 31) & Q;
     t[1] = GAMMA1 - 1 - a->coeffs[2*i+1];
     t[1] += ((int32_t)t[1] >> 31) & Q;
@@ -599,6 +653,91 @@ void polyz_pack(unsigned char *r, const poly *a) {
     r[5*i+3]  = t[1] >> 4;
     r[5*i+4]  = t[1] >> 12;
   }
+*/
+
+/*
+    for(i=0;i<N/4;++i){
+   
+       t[0] = GAMMA1 - 1 - a->coeffs[4*i+0];
+       t[0] += ((int32_t)t[0] >> 31) & Q;
+       t[1] = GAMMA1 - 1 - a->coeffs[4*i+1];
+       t[1] += ((int32_t)t[1] >> 31) & Q;
+       t[2] = GAMMA1 - 1 - a->coeffs[4*i+2];
+       t[2] += ((int32_t)t[2] >> 31) & Q;
+       t[3] = GAMMA1 - 1 - a->coeffs[4*i+3];
+       t[3] += ((int32_t)t[3] >> 31) & Q;
+
+       r[9*i+0]  = t[0];
+       r[9*i+1]  = t[0] >> 8;
+       r[9*i+2]  = t[0] >> 16;
+
+       r[9*i+2] |= t[1] << 1;
+       r[9*i+3]  = t[1] >> 7;
+       r[9*i+4]  = t[1] >> 15;
+
+       r[9*i+4] |= t[2] << 2;
+       r[9*i+5]  = t[2] >> 6;
+       r[9*i+6]  = t[2] >> 14;
+       
+       r[9*i+6] |= t[3] << 3;
+       r[9*i+7]  = t[3] >> 5;
+       r[9*i+8]  = t[3] >> 13;
+
+    }
+*/
+
+    for(i=0;i<N/8;++i){
+   
+       t[0] = GAMMA1 - 1 - a->coeffs[8*i+0];
+       t[0] += ((int32_t)t[0] >> 31) & Q;
+       t[1] = GAMMA1 - 1 - a->coeffs[8*i+1];
+       t[1] += ((int32_t)t[1] >> 31) & Q;
+       t[2] = GAMMA1 - 1 - a->coeffs[8*i+2];
+       t[2] += ((int32_t)t[2] >> 31) & Q;
+       t[3] = GAMMA1 - 1 - a->coeffs[8*i+3];
+       t[3] += ((int32_t)t[3] >> 31) & Q;
+       t[4] = GAMMA1 - 1 - a->coeffs[8*i+4];
+       t[4] += ((int32_t)t[4] >> 31) & Q;
+       t[5] = GAMMA1 - 1 - a->coeffs[8*i+5];
+       t[5] += ((int32_t)t[5] >> 31) & Q;
+       t[6] = GAMMA1 - 1 - a->coeffs[8*i+6];
+       t[6] += ((int32_t)t[6] >> 31) & Q;
+       t[7] = GAMMA1 - 1 - a->coeffs[8*i+7];
+       t[7] += ((int32_t)t[7] >> 31) & Q;
+
+       r[17*i+0]  = t[0];
+       r[17*i+1]  = t[0] >> 8;
+       r[17*i+2]  = t[0] >> 16;
+
+       r[17*i+2] |= t[1] << 1;
+       r[17*i+3]  = t[1] >> 7;
+       r[17*i+4]  = t[1] >> 15;
+
+       r[17*i+4] |= t[2] << 2;
+       r[17*i+5]  = t[2] >> 6;
+       r[17*i+6]  = t[2] >> 14;
+       
+       r[17*i+6] |= t[3] << 3;
+       r[17*i+7]  = t[3] >> 5;
+       r[17*i+8]  = t[3] >> 13;
+
+       r[17*i+8] |= t[4] << 4;
+       r[17*i+9]  = t[4] >> 4;
+       r[17*i+10]  = t[4] >> 12;
+
+       r[17*i+10] |= t[5] << 5;
+       r[17*i+11]  = t[5] >> 3;
+       r[17*i+12]  = t[5] >> 11;
+
+       r[17*i+12] |= t[6] << 6;
+       r[17*i+13]  = t[6] >> 2;
+       r[17*i+14]  = t[6] >> 10;
+
+       r[17*i+14] |= t[7] << 7;
+       r[17*i+15]  = t[7] >> 1;
+       r[17*i+16]  = t[7] >> 9;
+
+    }
 }
 
 /*************************************************
@@ -614,7 +753,7 @@ void polyz_pack(unsigned char *r, const poly *a) {
 **************************************************/
 void polyz_unpack(poly *r, const unsigned char *a) {
   unsigned int i;
-
+/*
   for(i = 0; i < N/2; ++i) {
     r->coeffs[2*i+0]  = a[5*i+0];
     r->coeffs[2*i+0] |= (uint32_t)a[5*i+1] << 8;
@@ -628,6 +767,87 @@ void polyz_unpack(poly *r, const unsigned char *a) {
     r->coeffs[2*i+0] += ((int32_t)r->coeffs[2*i+0] >> 31) & Q;
     r->coeffs[2*i+1] = GAMMA1 - 1 - r->coeffs[2*i+1];
     r->coeffs[2*i+1] += ((int32_t)r->coeffs[2*i+1] >> 31) & Q;
+  }
+*/
+/*
+  for(i = 0; i < N/4; ++i) {
+    r->coeffs[4*i+0]  = a[9*i+0];
+    r->coeffs[4*i+0] |= (uint32_t)a[9*i+1] << 8;
+    r->coeffs[4*i+0] |= (uint32_t)(a[9*i+2] & 0x01) << 16;
+
+    r->coeffs[4*i+1]  = a[9*i+2] >> 1;
+    r->coeffs[4*i+1] |= (uint32_t)a[9*i+3] << 7;
+    r->coeffs[4*i+1] |= (uint32_t)(a[9*i+4] & 0x03) << 15;
+
+    r->coeffs[4*i+2]  = a[9*i+4] >> 2;
+    r->coeffs[4*i+2] |= (uint32_t)a[9*i+5] << 6;
+    r->coeffs[4*i+2] |= (uint32_t)(a[9*i+6] & 0x07) << 14;
+    
+    r->coeffs[4*i+3]  = a[9*i+6] >> 3;
+    r->coeffs[4*i+3] |= (uint32_t)a[9*i+7] << 5;
+    r->coeffs[4*i+3] |= (uint32_t)(a[9*i+8] & 0x0f) << 13;
+
+    r->coeffs[4*i+0] = GAMMA1 - 1 - r->coeffs[4*i+0];
+    r->coeffs[4*i+0] += ((int32_t)r->coeffs[4*i+0] >> 31) & Q;
+    r->coeffs[4*i+1] = GAMMA1 - 1 - r->coeffs[4*i+1];
+    r->coeffs[4*i+1] += ((int32_t)r->coeffs[4*i+1] >> 31) & Q;
+    r->coeffs[4*i+2] = GAMMA1 - 1 - r->coeffs[4*i+2];
+    r->coeffs[4*i+2] += ((int32_t)r->coeffs[4*i+2] >> 31) & Q;
+    r->coeffs[4*i+3] = GAMMA1 - 1 - r->coeffs[4*i+3];
+    r->coeffs[4*i+3] += ((int32_t)r->coeffs[4*i+3] >> 31) & Q;
+  }*/
+
+
+  for(i = 0; i < N/8; ++i) {
+    r->coeffs[8*i+0]  = a[17*i+0];
+    r->coeffs[8*i+0] |= (uint32_t)a[17*i+1] << 8;
+    r->coeffs[8*i+0] |= (uint32_t)(a[17*i+2] & 0x01) << 16;
+
+    r->coeffs[8*i+1]  = a[17*i+2] >> 1;
+    r->coeffs[8*i+1] |= (uint32_t)a[17*i+3] << 7;
+    r->coeffs[8*i+1] |= (uint32_t)(a[17*i+4] & 0x03) << 15;
+
+    r->coeffs[8*i+2]  = a[17*i+4] >> 2;
+    r->coeffs[8*i+2] |= (uint32_t)a[17*i+5] << 6;
+    r->coeffs[8*i+2] |= (uint32_t)(a[17*i+6] & 0x07) << 14;
+    
+    r->coeffs[8*i+3]  = a[17*i+6] >> 3;
+    r->coeffs[8*i+3] |= (uint32_t)a[17*i+7] << 5;
+    r->coeffs[8*i+3] |= (uint32_t)(a[17*i+8] & 0x0f) << 13;
+
+    r->coeffs[8*i+4]  = a[17*i+8] >> 4;
+    r->coeffs[8*i+4] |= (uint32_t)a[17*i+9] << 4;
+    r->coeffs[8*i+4] |= (uint32_t)(a[17*i+10] & 0x1f) << 12;
+    
+    r->coeffs[8*i+5]  = a[17*i+10] >> 5;
+    r->coeffs[8*i+5] |= (uint32_t)a[17*i+11] << 3;
+    r->coeffs[8*i+5] |= (uint32_t)(a[17*i+12] & 0x3f) << 11;
+
+    r->coeffs[8*i+6]  = a[17*i+12] >> 6;
+    r->coeffs[8*i+6] |= (uint32_t)a[17*i+13] << 2;
+    r->coeffs[8*i+6] |= (uint32_t)(a[17*i+14] & 0x7f) << 10;
+
+    r->coeffs[8*i+7]  = a[17*i+14] >> 7;
+    r->coeffs[8*i+7] |= (uint32_t)a[17*i+15] << 1;
+    r->coeffs[8*i+7] |= (uint32_t)(a[17*i+16]) << 9;
+
+
+    r->coeffs[8*i+0] = GAMMA1 - 1 - r->coeffs[8*i+0];
+    r->coeffs[8*i+0] += ((int32_t)r->coeffs[8*i+0] >> 31) & Q;
+    r->coeffs[8*i+1] = GAMMA1 - 1 - r->coeffs[8*i+1];
+    r->coeffs[8*i+1] += ((int32_t)r->coeffs[8*i+1] >> 31) & Q;
+    r->coeffs[8*i+2] = GAMMA1 - 1 - r->coeffs[8*i+2];
+    r->coeffs[8*i+2] += ((int32_t)r->coeffs[8*i+2] >> 31) & Q;
+    r->coeffs[8*i+3] = GAMMA1 - 1 - r->coeffs[8*i+3];
+    r->coeffs[8*i+3] += ((int32_t)r->coeffs[8*i+3] >> 31) & Q;
+    r->coeffs[8*i+4] = GAMMA1 - 1 - r->coeffs[8*i+4];
+    r->coeffs[8*i+4] += ((int32_t)r->coeffs[8*i+4] >> 31) & Q;
+    r->coeffs[8*i+5] = GAMMA1 - 1 - r->coeffs[8*i+5];
+    r->coeffs[8*i+5] += ((int32_t)r->coeffs[8*i+5] >> 31) & Q;
+    r->coeffs[8*i+6] = GAMMA1 - 1 - r->coeffs[8*i+6];
+    r->coeffs[8*i+6] += ((int32_t)r->coeffs[8*i+6] >> 31) & Q;
+    r->coeffs[8*i+7] = GAMMA1 - 1 - r->coeffs[8*i+7];
+    r->coeffs[8*i+7] += ((int32_t)r->coeffs[8*i+7] >> 31) & Q;
   }
 }
 

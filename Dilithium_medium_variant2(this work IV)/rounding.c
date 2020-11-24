@@ -39,27 +39,35 @@ uint32_t power2round(uint32_t a, uint32_t *a0)  {
 * Returns a1
 **************************************************/
 uint32_t decompose(uint32_t a, uint32_t *a0) {
-#if ALPHA != (Q-1)/16
+#if ALPHA != (Q-1)/8
 #error "decompose assumes ALPHA == (Q-1)/16"
 #endif
   int32_t t, u;
   /* Centralized remainder mod ALPHA */
-  t = a & 0x7FFFF;
-  t += (a >> 19) << 9;
+//int it =a;
+//printf("%d=",it);
+//printf("%d mod  %d =  %d, ",a,it,a-(a/ALPHA*ALPHA));
+  t = a & 0xFFFF;
+  t += (a >> 16) << 6;
   t -= ALPHA/2 + 1;
   t += (t >> 31) & ALPHA;
   t -= ALPHA/2 - 1;
   a -= t;
 
+//printf("%d\n",a);
+//int ii;
+//scanf("%d",ii);
+
   /* Divide by ALPHA (possible to avoid) */
   u = a - 1;
   u >>= 31;
-  a = (a >> 19) + 1;
+  a = (a >> 16) + 1;
   a -= u & 1;
 
   /* Border case */
-  *a0 = Q + t - (a >> 4);
-  a &= 0xF;
+  *a0 = Q + t - (a >> 3);
+  a &= 0x7;
+//printf("%d * ALPHA + %d = %d, %d!\n",a,*a0,a*ALPHA+*a0,it-a*ALPHA-*a0);
   return a;
 }
 

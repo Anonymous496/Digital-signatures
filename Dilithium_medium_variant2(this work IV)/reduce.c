@@ -36,9 +36,9 @@ uint32_t montgomery_reduce(uint64_t a) {
 uint32_t reduce32(uint32_t a) {
   uint32_t t;
 
-  t = a & 0x7FFFFF;
-  a >>= 23;
-  t += ((a << 13) - a);
+  t = a & 0x7FFFF;
+  a >>= 19;
+  t += ((a << 9) - a);
   return t;
 }
 

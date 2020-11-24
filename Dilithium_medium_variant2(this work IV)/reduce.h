@@ -3,8 +3,8 @@
 
 #include <stdint.h>
 
-#define MONT 4193792U // 2^32 % Q
-#define QINV 4236238847U // -q^(-1) mod 2^32
+#define MONT 519673U // 2^32 % Q
+#define QINV 402914815U // -q^(-1) mod 2^32
 
 /* a <= Q*2^32 = > r < 2*Q */
 uint32_t montgomery_reduce(uint64_t a);
