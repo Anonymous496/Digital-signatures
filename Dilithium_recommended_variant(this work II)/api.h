@@ -3,7 +3,7 @@
 
 #define CRYPTO_PUBLICKEYBYTES 1472U
 #define CRYPTO_SECRETKEYBYTES 3504U
-#define CRYPTO_BYTES 2701U
+#define CRYPTO_BYTES 2709U
 
 #define CRYPTO_ALGNAME "Dilithium_recommended"
 

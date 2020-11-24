@@ -160,6 +160,7 @@ void pack_sig(unsigned char sig[SIG_SIZE_PACKED],
 {
   unsigned int i, j, k;
   uint64_t signs, mask;
+  uint64_t signs2,mask2;  
 
   for(i = 0; i < L; ++i)
     polyz_pack(sig + i*POLZ_SIZE_PACKED, z->vec+i);
@@ -178,21 +179,39 @@ void pack_sig(unsigned char sig[SIG_SIZE_PACKED],
   sig += OMEGA + K;
   
   /* Encode c */
+
+  int jw =0;
   signs = 0;
+  signs2 =0;
   mask = 1;
+  mask2 =1;
   for(i = 0; i < N/8; ++i) {
     sig[i] = 0;
     for(j = 0; j < 8; ++j) {
       if(c->coeffs[8*i+j] != 0) {
         sig[i] |= (1 << j);
-        if(c->coeffs[8*i+j] == (Q - 1)) signs |= mask;
-        mask <<= 1;
+        if(jw==0){
+          if(c->coeffs[8*i+j] == (Q - 1)) signs |= mask;
+          mask <<= 1;
+          if(mask==0)
+            jw = 1;
+        }else{
+
+          if(c->coeffs[8*i+j] == (Q - 1)) signs2 |= mask2;
+          mask2 <<= 1;
+        }
       }
     }
   }
   sig += N/8;
   for(i = 0; i < 8; ++i)
     sig[i] = signs >> 8*i;
+  
+  sig += 8;
+ 
+  for(i = 0; i < 8; ++i)
+    sig[i] = signs2 >> 8*i;
+
 }
 
 /*************************************************
@@ -212,6 +231,7 @@ void unpack_sig(polyvecl *z,
 {
   unsigned int i, j, k;
   uint64_t signs, mask;
+  uint64_t signs2, mask2;
 
   for(i = 0; i < L; ++i)
     polyz_unpack(z->vec+i, sig + i*POLZ_SIZE_PACKED);
@@ -238,12 +258,28 @@ void unpack_sig(polyvecl *z,
   for(i = 0; i < 8; ++i)
     signs |= (uint64_t)sig[N/8+i] << 8*i;
 
+  signs2 = 0;
+  for(i = 0; i < 8; ++i)
+    signs2 |= (uint64_t)sig[N/8+8+i] << 8*i;
+
+
   mask = 1;
+  mask2 = 1;
+  int jw =0;
   for(i = 0; i < N/8; ++i) {
     for(j = 0; j < 8; ++j) {
       if((sig[i] >> j) & 0x01) {
-        c->coeffs[8*i+j] = (signs & mask) ? Q - 1 : 1;
-        mask <<= 1;
+        if(jw==0){
+          c->coeffs[8*i+j] = (signs & mask) ? Q - 1 : 1;
+          mask <<= 1;
+          if(mask==0)
+            jw=1;
+        }else{
+
+          c->coeffs[8*i+j] = (signs2 & mask2) ? Q - 1 : 1;
+          mask2 <<= 1;
+        }
+
       }
     }
   }
