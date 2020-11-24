@@ -18,17 +18,18 @@ int main(void)
   unsigned char pk[CRYPTO_PUBLICKEYBYTES];
   unsigned char sk[CRYPTO_SECRETKEYBYTES];
   unsigned long long t0[NTESTS], t1[NTESTS], t2[NTESTS];
+
   for(i = 0; i < NTESTS; ++i) {
     randombytes(m, MLEN);
 
     t0[i] = cpucycles();
     crypto_sign_keypair(pk, sk);
     t0[i] = cpucycles() - t0[i];
-//printf("keypair!\n");
+
     t1[i] = cpucycles();
     crypto_sign(sm, &smlen, m, MLEN, sk);
     t1[i] = cpucycles() - t1[i];
-//printf("sign!\n");
+
     t2[i] = cpucycles();
     ret = crypto_sign_open(m2, &mlen, sm, smlen, pk);
     t2[i] = cpucycles() - t2[i];
@@ -50,7 +51,6 @@ int main(void)
       }
     }
   }
-
 
   print_results("keygen:", t0, NTESTS);
   print_results("sign: ", t1, NTESTS);

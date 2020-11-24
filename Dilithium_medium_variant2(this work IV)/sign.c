@@ -42,7 +42,7 @@ void expand_mat(polyvecl mat[K], const unsigned char rho[SEEDBYTES]) {
         val  = outbuf[pos++];
         val |= (uint32_t)outbuf[pos++] << 8;
         val |= (uint32_t)outbuf[pos++] << 16;
-        val &= 0x7FFFF;
+        val &= 0x7FFFFF;
 
         /* Rejection sampling */
         if(val < Q)
@@ -90,7 +90,7 @@ void challenge(poly *c,
   for(i = 0; i < N; ++i)
     c->coeffs[i] = 0;
 
-  for(i = 196; i < 256; ++i) {
+  for(i = 185; i < 256; ++i) {
     do {
       if(pos >= SHAKE256_RATE) {
         shake256_squeezeblocks(outbuf, 1, state);
@@ -104,6 +104,10 @@ void challenge(poly *c,
     c->coeffs[b] = (signs & mask) ? Q - 1 : 1;
     mask <<= 1;
   }
+/*  for (int i=0;i<256;i++)
+    printf("%d ",c->coeffs[i]);
+printf("\n");*/
+//while(1){}
 }
 
 /*************************************************
@@ -159,28 +163,10 @@ int crypto_sign_keypair(unsigned char *pk, unsigned char *sk) {
   polyveck_freeze(&t);
   polyveck_power2round(&t1, &t0, &t);
   pack_pk(pk, rho, &t1);
+
   /* Compute CRH(rho, t1) and write secret key */
   shake256(tr, CRHBYTES, pk, CRYPTO_PUBLICKEYBYTES);
   pack_sk(sk, rho, key, tr, &s1, &s2, &t0);
-
-//ZZX
-
-//printf("pk:%d sm:%d   \n",PK_SIZE_PACKED,SIG_SIZE_PACKED);
-/*
-  polyvecl  s1t;
-  polyveck s2t, t0t;
-
-  unsigned char seedbuft[2*SEEDBYTES + CRHBYTES];
-  unsigned char smt[SEEDBYTES];
-  unsigned char *rhot, *keyt, *mut, *trt;
-  rhot = seedbuft;
-  keyt = seedbuft + SEEDBYTES;
-  mut = seedbuft + 2*SEEDBYTES;
-
-  trt = smt + CRYPTO_BYTES - CRHBYTES;
-  unpack_sk(rhot, keyt, trt, &s1t, &s2t, &t0t, sk);
-*/
-
 
   return 0;
 }
@@ -221,11 +207,7 @@ int crypto_sign(unsigned char *sm,
   mu = seedbuf + 2*SEEDBYTES;
   tr = sm + CRYPTO_BYTES - CRHBYTES;
   unpack_sk(rho, key, tr, &s1, &s2, &t0, sk);
-/*
-for(int i=0;i<N;i++)
-printf("%d ",t0.vec[0].coeffs[i]);
-printf("\n");
-*/
+
   /* Copy message at the end of the sm buffer */
   for(i = 0; i < mlen; ++i)
     sm[CRYPTO_BYTES + i] = m[i];
@@ -238,11 +220,7 @@ printf("\n");
   polyvecl_ntt(&s1);
   polyveck_ntt(&s2);
   polyveck_ntt(&t0);
-/*
-for(int i=0;i<N;i++)
-printf("%d ",mat[0].vec[0].coeffs[i]);
-printf("\n");
-*/
+
   rej:
   /* Sample intermediate vector y */
   for(i = 0; i < L; ++i)
@@ -270,7 +248,6 @@ printf("\n");
   }
   polyvecl_add(&z, &z, &y);
   polyvecl_freeze(&z);
-//printf("R1\n");
   if(polyvecl_chknorm(&z, GAMMA1 - BETA1))
     goto rej;
 
@@ -283,34 +260,21 @@ printf("\n");
   polyveck_freeze(&wcs2);
   polyveck_decompose(&tmp, &wcs20, &wcs2);
   polyveck_freeze(&wcs20);
-  
-//printf("R2\n");
   if(polyveck_chknorm(&wcs20, GAMMA2 - BETA2))
     goto rej;
 
-//printf("R3\n");
   for(i = 0; i < K; ++i)
     for(j = 0; j < N; ++j)
       if(tmp.vec[i].coeffs[j] != w1.vec[i].coeffs[j])
         goto rej;
-/*
-for(int i=0;i<N;i++)
-printf("%d ",s1.vec[0].coeffs[i]);
-printf("\n");
-int ii;
-scanf("%d",&ii);*/
+
   /* Compute hints for w1 */
   for(i = 0; i < K; ++i) {
     poly_pointwise_invmontgomery(ct0.vec+i, &chat, t0.vec+i);
     poly_invntt_montgomery(ct0.vec+i);
   }
-  polyveck_freeze(&ct0);
 
-/*
-for(int i=0;i<N;i++)
-printf("%d ",ct0.vec[0].coeffs[i]);
-printf("\n");
-*/
+  polyveck_freeze(&ct0);
   if(polyveck_chknorm(&ct0, GAMMA2 - BETA2))
     goto rej;
 
@@ -318,7 +282,6 @@ printf("\n");
   polyveck_neg(&ct0);
   polyveck_freeze(&tmp);
   n = polyveck_make_hint(&h, &tmp, &ct0);
-  	
   if(n > OMEGA)
     goto rej;
 
@@ -326,8 +289,6 @@ printf("\n");
   pack_sig(sm, &z, &h, &c);
 
   *smlen = mlen + CRYPTO_BYTES;
-
-
   return 0;
 }
 
@@ -382,11 +343,7 @@ int crypto_sign_open(unsigned char *m,
   shake256(mu, CRHBYTES, m + CRYPTO_BYTES - CRHBYTES, CRHBYTES + *mlen);
 
   expand_mat(mat, rho);
-/*  
-for(int i=0;i<N;i++)
-printf("%d ",mat[0].vec[0].coeffs[i]);
-printf("\n");
-*/
+  
   /* Matrix-vector multiplication; compute Az - c2^dt1 */
   polyvecl_ntt(&z);
   for(i = 0; i < K ; ++i)
@@ -409,16 +366,6 @@ printf("\n");
 
   /* Call random oracle and verify challenge */
   challenge(&cp, mu, &w1);
-/*
-printf("V2\n");
-for(int i=0;i<N;i++)
-printf("%d ",cp.coeffs[i]);
-printf("\n");
-for(int i=0;i<N;i++)
-printf("%d ",c.coeffs[i]);
-printf("\n");
-printf("V3\n");
-*/
   for(i = 0; i < N; ++i)
     if(c.coeffs[i] != cp.coeffs[i])
       goto badsig;

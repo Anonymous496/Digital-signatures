@@ -1,11 +1,11 @@
 #ifndef API_H
 #define API_H
 
-#define CRYPTO_PUBLICKEYBYTES 1184U
-#define CRYPTO_SECRETKEYBYTES 2800U
-#define CRYPTO_BYTES 1756U//2044U
+#define CRYPTO_PUBLICKEYBYTES 1472U
+#define CRYPTO_SECRETKEYBYTES 3504U
+#define CRYPTO_BYTES 2709U
 
-#define CRYPTO_ALGNAME "Dilithium_medium"
+#define CRYPTO_ALGNAME "Dilithium_recommended"
 
 int crypto_sign_keypair(unsigned char *pk, unsigned char *sk);
 
