@@ -90,7 +90,7 @@ void challenge(poly *c,
   for(i = 0; i < N; ++i)
     c->coeffs[i] = 0;
 
-  for(i = 185; i < 256; ++i) {
+  for(i = 196; i < 256; ++i) {
     do {
       if(pos >= SHAKE256_RATE) {
         shake256_squeezeblocks(outbuf, 1, state);
@@ -104,10 +104,6 @@ void challenge(poly *c,
     c->coeffs[b] = (signs & mask) ? Q - 1 : 1;
     mask <<= 1;
   }
-/*  for (int i=0;i<256;i++)
-    printf("%d ",c->coeffs[i]);
-printf("\n");*/
-//while(1){}
 }
 
 /*************************************************
