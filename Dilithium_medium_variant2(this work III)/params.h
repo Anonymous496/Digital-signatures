@@ -27,8 +27,8 @@
 #define L 3U
 #define ETA 2U
 #define SETABITS 3U
-#define BETA1 42U
-#define BETA2 43U
+#define BETA1 46U
+#define BETA2 48U
 #define OMEGA 80U
 
 #elif MODE == 2
